@@ -4,9 +4,9 @@ qgisMinimumVersion=3.0
 description=Імпортує геометрію ділянки та обмежень з кадастрового обмінного файлу
 version=0.3.5
 author=Стьопа
-email=''
+email=brych92@gmail.com
 about=Плагін імпортує геометрії ділянок та обмежень одного або декількох XML файлів, і закидує їх в тимчсові шари, з додаванням атрибуту імені файлу геометрії, цільового, та коду і назви обмеження.
 tracker=http://bugs
-repository=http://repo
+repository=https://github.com/brych92/UA_XML_Importer
 icon=icon.png
 
