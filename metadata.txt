@@ -2,11 +2,11 @@
 name=UA XML importer
 qgisMinimumVersion=3.0
 description=Імпортує геометрію ділянки та обмежень з кадастрового обмінного файлу
-version=0.3.5
+version=0.4.1
 author=Стьопа
 email=brych92@gmail.com
 about=Плагін імпортує геометрії ділянок та обмежень одного або декількох XML файлів, і закидує їх в тимчсові шари, з додаванням атрибуту імені файлу геометрії, цільового, та коду і назви обмеження.
-tracker=http://bugs
+tracker=https://github.com/brych92/UA_XML_Importer/issues
 repository=https://github.com/brych92/UA_XML_Importer
 icon=icon.png
-
+homepage=https://github.com/brych92/UA_XML_Importer
