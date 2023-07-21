@@ -18,6 +18,7 @@ class Importer:
         self.plugin_dir = os.path.dirname(__file__)
         self.actions = []
         self.isRun=None
+        self.folder_path=os.path.expanduser('~')
         
     def initGui(self):
         icon = QIcon(os.path.join(self.plugin_dir,"icon.png"))
@@ -54,7 +55,7 @@ class Importer:
         err_dict={'parc_inv':[],'rest_inv':[],'other_inv':[],'parc_err':[],'rest_err':[],'other_err':[]}
         crs_layers={}
         pathArr=[]
-        def get_crs(root):            
+        def get_crs(root):
             epsg={
                 'SC63X/1':'7825',
                 'SC63X/2':'7826',
@@ -114,8 +115,8 @@ class Importer:
             elif crs_type=="Local":
                 try:
                     crs_zone=root.find("./InfoPart/MetricInfo/CoordinateSystem/").text[-2:]
-                except AttributeError:
-                    crs_zone='custom'
+                except (AttributeError,TypeError):
+                    crs_zone='undefined'
                 crs_comb='Local/'+crs_zone
             else:
                 crs_comb=root.find("./InfoPart/MetricInfo/CoordinateSystem/").tag
@@ -157,13 +158,21 @@ class Importer:
                     geom_arr.append(geom)
                 res_geom=res_geom.combine(geom.makeValid())   
             return res_geom
-    
-        pathArr=QFileDialog.getOpenFileNames(None,"Виберіть XML файл(файли) для імпорту", os.path.expanduser('~'), "Кадастровий XML (*.xml)")[0]
+        def convert_string_to_float(string_with_comma):            
+            string_with_dot = string_with_comma.replace(',', '.')
+            try:
+                result = float(string_with_dot)
+                return result
+            except ValueError:                
+                print(f"Помилка: '{string_with_dot}' невірне число.")
+                return None
+        pathArr=QFileDialog.getOpenFileNames(None,"Виберіть XML файл(файли) для імпорту", self.folder_path, "Кадастровий XML (*.xml)")[0]
         if pathArr==[]:
             print('Нічого не вибрано!')
             return
         print(str(len(pathArr))+' файлів до обробки:')
         print('\t'+str(pathArr))
+        self.folder_path=os.path.dirname(pathArr[0])
         
         window = QProgressDialog(self.iface.mainWindow())
         window.setWindowTitle("Обробляю...")            
@@ -188,7 +197,7 @@ class Importer:
                 if crs=='': crs=get_crs(root)[1] #якшо не визначило epsg тоді вписуємо шо воно витягло з XML
                 points={}#словарь з списком точок 'UIDP': [x,y]
                 for child in root.findall("./InfoPart/MetricInfo/PointInfo/Point"):
-                    points[int(child.find("./UIDP").text)]=QgsPointXY(float(child.find("./Y").text),float(child.find("./X").text))
+                    points[int(child.find("./UIDP").text)]=QgsPointXY(convert_string_to_float(child.find("./Y").text),convert_string_to_float(child.find("./X").text))
                 _print(f"Знайдено {len(points)} точок")
                 linesC={}#словарь з списком ліній 'ULID':[UIDP, UIDP, UIDP...]
                 for child in root.findall("./InfoPart/MetricInfo/Polyline/PL"):
@@ -227,8 +236,12 @@ class Importer:
                     feature.setAttribute(1,use) 
                     feature.setAttribute(2,purpose)                    
                     try:
-                        feature.setAttribute(3,{"100":"Приватна власність","200":"Комунальна власність", "300":"Державна власність"}[element.find("./OwnershipInfo/Code").text])
-                    except (KeyError, AttributeError):
+                        a={"100":"Приватна власність","200":"Комунальна власність", "300":"Державна власність"}
+                        if element.find("./OwnershipInfo/Code").text in a:
+                            feature.setAttribute(3,a[element.find("./OwnershipInfo/Code").text])
+                        else:
+                            feature.setAttribute(3,element.find("./OwnershipInfo/Code").text)
+                    except AttributeError:
                         feature.setAttribute(3,'*не роспізнано*')
                         _print("\t\tOwnership не знайдено")
                     feature.setAttribute(4,area+' '+area_unit)
@@ -351,7 +364,7 @@ class Importer:
                         pass
                     try:
                         attr=attr+'Тип: '+ter_zones[part.find('./TerritorialZoneNumber/TerritorialZoneCode').text]+'; '
-                    except AttributeError:
+                    except (AttributeError, KeyError):
                         pass
                     try:
                         attr=attr+'Код: '+part.find('./TerritorialZoneNumber/TerritorialZoneShortNumber').text+'; '
@@ -388,7 +401,7 @@ class Importer:
                 group = QgsProject.instance().layerTreeRoot().insertGroup(0,crs[4:-1])
                 print(f'\tСтворюю групу шарів {crs[4:-1]}.')
             else:
-                epsg=''
+                epsg='crs=epsg:7827&'
                 group = QgsProject.instance().layerTreeRoot().insertGroup(0,crs)
                 print(f'\tСтворюю групу шарів {crs}.')
             if 'Restrictions' in crs_layers[crs]:
